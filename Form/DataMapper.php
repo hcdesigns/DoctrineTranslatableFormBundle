@@ -181,7 +181,6 @@ class DataMapper implements DataMapperInterface{
                             $t = $this->em->getRepository($config['translationClass'])
                                 ->translate($entityInstance, $form->getName(), $iso, $translations[$iso]);
                             $this->em->persist($entityInstance);
-                            $this->em->flush();
                         } else {
                             $this->repository->translate($entityInstance, $form->getName(), $iso, $translations[$iso] );
                         }
