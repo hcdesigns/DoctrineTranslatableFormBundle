@@ -92,6 +92,7 @@ class DataMapper implements DataMapperInterface{
     public function add($name, $type, $options=[])
     {
 
+                $parentOptions = $options;
         $this->property_names[] = $name;
 
         $field = $this->builder
@@ -105,7 +106,9 @@ class DataMapper implements DataMapperInterface{
 
             $options = [
                 "label"   => $iso,
-                "required"=> ($iso == $this->required_locale && (!isset($options["required"]) || $options["required"] ))
+                "required" => ($iso == $this->required_locale && (!isset($options["required"]) || $options["required"] )) ? true : false,
+                "constraints" => ($iso == $this->required_locale && isset($parentOptions["constraints"]) ? $parentOptions["constraints"] : []),
+                "error_bubbling" => false
             ];
 
             $field->add($iso, get_class($field->getType()->getParent()->getInnerType()), $options);
