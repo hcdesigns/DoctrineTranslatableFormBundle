@@ -130,6 +130,9 @@ class DataMapper implements DataMapperInterface{
      */
     public function mapDataToForms($data, $forms)
     {
+        if ($data === null) {
+            return;
+        }
         foreach($forms as $form) {
             $translations = $this->getTranslations($data);
             if (false !== in_array($form->getName(), $this->property_names)) {
