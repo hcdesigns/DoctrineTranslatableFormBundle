@@ -108,7 +108,8 @@ class DataMapper implements DataMapperInterface{
                 "label"   => $iso,
                 "required" => ($iso == $this->required_locale && (!isset($parentOptions["required"]) || $parentOptions["required"] )) ? true : false,
                 "constraints" => ($iso == $this->required_locale && isset($parentOptions["constraints"]) ? $parentOptions["constraints"] : []),
-                "error_bubbling" => false
+                "error_bubbling" => false,
+                'attr' => isset($parentOptions['attr']) ? $parentOptions['attr'] : []
             ];
 
             $field->add($iso, get_class($field->getType()->getParent()->getInnerType()), $options);
