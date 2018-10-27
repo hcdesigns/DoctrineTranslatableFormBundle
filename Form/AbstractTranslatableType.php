@@ -65,6 +65,11 @@ abstract class AbstractTranslatableType extends \Symfony\Component\Form\Abstract
     protected function createTranslatableMapper(FormBuilderInterface $builderInterface, array $options){
 
 
+        dump($options);
+        dump($builderInterface);
+        dump($this->mapper);
+        die();
+
 
         $this->mapper->setBuilder($builderInterface, $options);
         $this->mapper->setLocales($options["locales"]);
