@@ -8,13 +8,10 @@
 namespace Simettric\DoctrineTranslatableFormBundle\Form;
 
 
-use Doctrine\DBAL\DBALException;
 use Doctrine\ORM\EntityManager;
-use Doctrine\ORM\ORMException;
 use Gedmo\Translatable\TranslatableListener;
 use Simettric\DoctrineTranslatableFormBundle\Interfaces\TranslatableFieldInterface;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\Form\FormError;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Gedmo\Translatable\Entity\Repository\TranslationRepository;
 use Symfony\Component\Form\FormInterface;
@@ -167,7 +164,7 @@ class DataMapper implements DataMapperInterface{
      * @param FormInterface[] $forms A list of {@link FormInterface} instances.
      * @param mixed $data Structured data.
      *
-     * @throws DBALException|ORMException
+     * @throws Exception\UnexpectedTypeException if the type of the data parameter is not supported.
      */
     public function mapFormsToData($forms, &$data)
     {
@@ -188,30 +185,13 @@ class DataMapper implements DataMapperInterface{
 
                 $translations = $form->getData();
                 foreach($this->getLocales() as $iso) {
-                    // isset() was used here failing checks that had entries, but were null, never undoing values that would be emptied
                     if(array_key_exists($iso, $translations)){
                         if (isset($config['translationClass'])) {
-                            /** @var TranslationRepository $repo */
-                            $repo = $this->em->getRepository($config['translationClass']);
-                            $repo->translate($entityInstance, $form->getName(), $iso, $translations[$iso]);
+                            $t = $this->em->getRepository($config['translationClass'])
+                                ->translate($entityInstance, $form->getName(), $iso, $translations[$iso]);
                             $this->em->persist($entityInstance);
                         } else {
                             $this->repository->translate($entityInstance, $form->getName(), $iso, $translations[$iso] );
-                        }
-                    }
-                }
-
-                $parent = $form->getParent();
-                if ($parent) {
-                    $parentData = $parent->getData();
-                    $getMethod = 'get'.ucfirst($form->getName());
-                    if (!$parentData->$getMethod()) {
-                        if (array_key_exists('en', $translations)) {
-                            $setMethod = 'set'.ucfirst($form->getName());
-                            $parentData->$setMethod($translations['en']);
-                        } else if (array_key_exists('nl', $translations)) {
-                            $setMethod = 'set'.ucfirst($form->getName());
-                            $parentData->$setMethod($translations['nl']);
                         }
                     }
                 }
