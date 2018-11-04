@@ -1,12 +1,6 @@
 <?php
-/**
- * Created by Asier Marqués <asiermarques@gmail.com>
- * Date: 17/5/16
- * Time: 20:58
- */
 
 namespace Simettric\DoctrineTranslatableFormBundle\Form;
-
 
 use Doctrine\DBAL\DBALException;
 use Doctrine\ORM\EntityManager;
@@ -14,15 +8,13 @@ use Doctrine\ORM\ORMException;
 use Gedmo\Translatable\TranslatableListener;
 use Simettric\DoctrineTranslatableFormBundle\Interfaces\TranslatableFieldInterface;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\Form\FormError;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Gedmo\Translatable\Entity\Repository\TranslationRepository;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\Exception;
 
-class DataMapper implements DataMapperInterface{
-
-
+class DataMapper implements DataMapperInterface
+{
     /**
      * @var EntityManager
      */
@@ -38,34 +30,36 @@ class DataMapper implements DataMapperInterface{
      */
     private $builder;
 
-    private $translations=[];
+    private $translations = [];
 
 
-    private $locales=[];
+    private $locales = [];
 
     private $required_locale;
 
-    private $property_names=[];
+    private $property_names = [];
 
 
-
-
-    public function __construct(EntityManager $entityManager){
+    public function __construct(EntityManager $entityManager)
+    {
 
         $this->em = $entityManager;
         $this->repository = $this->em->getRepository('Gedmo\Translatable\Entity\Translation');
 
     }
 
-    public function setBuilder(FormBuilderInterface $builderInterface){
+    public function setBuilder(FormBuilderInterface $builderInterface)
+    {
         $this->builder = $builderInterface;
     }
 
-    public function setRequiredLocale($locale){
+    public function setRequiredLocale($locale)
+    {
         $this->required_locale = $locale;
     }
 
-    public function setLocales(array $locales){
+    public function setLocales(array $locales)
+    {
         $this->locales = $locales;
     }
 
@@ -74,9 +68,10 @@ class DataMapper implements DataMapperInterface{
         return $this->locales;
     }
 
-    public function getTranslations($entity){
+    public function getTranslations($entity)
+    {
 
-        if(!count($this->translations)){
+        if (!count($this->translations)) {
             $this->translations = $this->repository->findTranslations($entity);
         }
 
@@ -92,7 +87,7 @@ class DataMapper implements DataMapperInterface{
      * @return DataMapper
      * @throws \Exception
      */
-    public function add($name, $type, $options=[])
+    public function add($name, $type, $options = [])
     {
 
         $parentOptions = $options;
@@ -104,14 +99,14 @@ class DataMapper implements DataMapperInterface{
             ])
             ->get($name);
 
-        if(!$field->getType()->getInnerType() instanceof TranslatableFieldInterface)
+        if (!$field->getType()->getInnerType() instanceof TranslatableFieldInterface)
             throw new \Exception("{$name} must implement TranslatableFieldInterface");
 
-        foreach($this->locales as $iso){
+        foreach ($this->locales as $iso) {
 
             $options = [
-                "label"   => $iso,
-                "required" => ($iso == $this->required_locale && (!isset($parentOptions["required"]) || $parentOptions["required"] )) ? true : false,
+                "label" => $iso,
+                "required" => ($iso == $this->required_locale && (!isset($parentOptions["required"]) || $parentOptions["required"])) ? true : false,
                 "constraints" => ($iso == $this->required_locale && isset($parentOptions["constraints"]) ? $parentOptions["constraints"] : []),
                 "error_bubbling" => false,
                 'attr' => isset($parentOptions['attr']) ? $parentOptions['attr'] : []
@@ -139,14 +134,14 @@ class DataMapper implements DataMapperInterface{
         if ($data === null) {
             return;
         }
-        foreach($forms as $form) {
+        foreach ($forms as $form) {
             $translations = $this->getTranslations($data);
             if (false !== in_array($form->getName(), $this->property_names)) {
                 $values = [];
-                foreach($this->getLocales() as $iso){
+                foreach ($this->getLocales() as $iso) {
 
-                    if(isset($translations[$iso])){
-                        $values[$iso] =  isset($translations[$iso][$form->getName()]) ? $translations[$iso][$form->getName()] : "";
+                    if (isset($translations[$iso])) {
+                        $values[$iso] = isset($translations[$iso][$form->getName()]) ? $translations[$iso][$form->getName()] : "";
 
                     }
                 }
@@ -179,7 +174,7 @@ class DataMapper implements DataMapperInterface{
             $entityInstance = $data;
 
 
-            if(false !== in_array($form->getName(), $this->property_names)) {
+            if (false !== in_array($form->getName(), $this->property_names)) {
 
                 $meta = $this->em->getClassMetadata(get_class($entityInstance));
                 $listener = new TranslatableListener();
@@ -187,16 +182,16 @@ class DataMapper implements DataMapperInterface{
                 $config = $listener->getConfiguration($this->em, $meta->name);
 
                 $translations = $form->getData();
-                foreach($this->getLocales() as $iso) {
+                foreach ($this->getLocales() as $iso) {
                     // isset() was used here failing checks that had entries, but were null, never undoing values that would be emptied
-                    if(array_key_exists($iso, $translations)){
+                    if (array_key_exists($iso, $translations)) {
                         if (isset($config['translationClass'])) {
                             /** @var TranslationRepository $repo */
                             $repo = $this->em->getRepository($config['translationClass']);
                             $repo->translate($entityInstance, $form->getName(), $iso, $translations[$iso]);
                             $this->em->persist($entityInstance);
                         } else {
-                            $this->repository->translate($entityInstance, $form->getName(), $iso, $translations[$iso] );
+                            $this->repository->translate($entityInstance, $form->getName(), $iso, $translations[$iso]);
                         }
                     }
                 }
@@ -204,22 +199,22 @@ class DataMapper implements DataMapperInterface{
                 $parent = $form->getParent();
                 if ($parent) {
                     $parentData = $parent->getData();
-                    $getMethod = 'get'.ucfirst($form->getName());
+                    $getMethod = 'get' . ucfirst($form->getName());
                     if (!$parentData->$getMethod()) {
                         if (array_key_exists('en', $translations)) {
-                            $setMethod = 'set'.ucfirst($form->getName());
+                            $setMethod = 'set' . ucfirst($form->getName());
                             $parentData->$setMethod($translations['en']);
                         } else if (array_key_exists('nl', $translations)) {
-                            $setMethod = 'set'.ucfirst($form->getName());
+                            $setMethod = 'set' . ucfirst($form->getName());
                             $parentData->$setMethod($translations['nl']);
                         }
                     }
                 }
 
 
-            }else{
+            } else {
 
-                if(false === $form->getConfig()->getOption("mapped") || null === $form->getConfig()->getOption("mapped")){
+                if (false === $form->getConfig()->getOption("mapped") || null === $form->getConfig()->getOption("mapped")) {
                     continue;
                 }
 
