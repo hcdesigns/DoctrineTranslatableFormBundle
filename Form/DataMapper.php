@@ -130,7 +130,7 @@ class DataMapper implements DataMapperInterface
                 }
                 // Can't get defaultLocale here, so just assume 'en'. Get the default main entity value when it's English
                 // as it won't be saved anymore as a translation entry.
-                if (!isset($values['en'])) {
+                if (!isset($values['en']) || empty(trim($values['en']))) {
                     $methodName = 'get' . ucfirst($form->getName());
                     $values['en'] = $data->$methodName();
                 }
