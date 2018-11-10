@@ -31,21 +31,14 @@ class DataMapper implements DataMapperInterface
     private $builder;
 
     private $translations = [];
-
-
     private $locales = [];
-
     private $required_locale;
-
     private $property_names = [];
-
 
     public function __construct(EntityManager $entityManager)
     {
-
         $this->em = $entityManager;
         $this->repository = $this->em->getRepository('Gedmo\Translatable\Entity\Translation');
-
     }
 
     public function setBuilder(FormBuilderInterface $builderInterface)
@@ -70,15 +63,11 @@ class DataMapper implements DataMapperInterface
 
     public function getTranslations($entity)
     {
-
         if (!count($this->translations)) {
             $this->translations = $this->repository->findTranslations($entity);
         }
-
         return $this->translations;
-
     }
-
 
     /**
      * @param $name
@@ -89,7 +78,6 @@ class DataMapper implements DataMapperInterface
      */
     public function add($name, $type, $options = [])
     {
-
         $parentOptions = $options;
         $this->property_names[] = $name;
 
@@ -103,7 +91,6 @@ class DataMapper implements DataMapperInterface
             throw new \Exception("{$name} must implement TranslatableFieldInterface");
 
         foreach ($this->locales as $iso) {
-
             $options = [
                 "label" => $iso,
                 "required" => ($iso == $this->required_locale && (!isset($parentOptions["required"]) || $parentOptions["required"])) ? true : false,
@@ -113,13 +100,11 @@ class DataMapper implements DataMapperInterface
             ];
 
             $field->add($iso, get_class($field->getType()->getParent()->getInnerType()), $options);
-
         }
 
         return $this;
 
     }
-
 
     /**
      * Maps properties of some data to a list of forms.
@@ -139,11 +124,15 @@ class DataMapper implements DataMapperInterface
             if (false !== in_array($form->getName(), $this->property_names)) {
                 $values = [];
                 foreach ($this->getLocales() as $iso) {
-
                     if (isset($translations[$iso])) {
                         $values[$iso] = isset($translations[$iso][$form->getName()]) ? $translations[$iso][$form->getName()] : "";
-
                     }
+                }
+                // Can't get defaultLocale here, so just assume 'en'. Get the default main entity value when it's English
+                // as it won't be saved anymore as a translation entry.
+                if (!isset($values['en'])) {
+                    $methodName = 'get' . ucfirst($form->getName());
+                    $values['en'] = $data->$methodName();
                 }
                 $form->setData($values);
             } else {
@@ -162,70 +151,33 @@ class DataMapper implements DataMapperInterface
      * @param FormInterface[] $forms A list of {@link FormInterface} instances.
      * @param mixed $data Structured data.
      *
-     * @throws DBALException|ORMException
+     * @throws ORMException
      */
     public function mapFormsToData($forms, &$data)
     {
-        /**
-         * @var $form FormInterface
-         */
+        /* @var $form FormInterface */
         foreach ($forms as $form) {
-
             $entityInstance = $data;
 
-
             if (false !== in_array($form->getName(), $this->property_names)) {
-
                 $meta = $this->em->getClassMetadata(get_class($entityInstance));
                 $listener = new TranslatableListener();
                 $listener->loadMetadataForObjectClass($this->em, $meta);
-                $config = $listener->getConfiguration($this->em, $meta->name);
+//                $config = $listener->getConfiguration($this->em, $meta->name);
 
                 $translations = $form->getData();
                 foreach ($this->getLocales() as $iso) {
-                    // isset() was used here failing checks that had entries, but were null, never undoing values that would be emptied
                     if (array_key_exists($iso, $translations)) {
-                        if (isset($config['translationClass'])) {
-                            /** @var TranslationRepository $repo */
-                            $repo = $this->em->getRepository($config['translationClass']);
-                            $repo->translate($entityInstance, $form->getName(), $iso, $translations[$iso]);
-                            $this->em->persist($entityInstance);
-                        } else {
-                            $this->repository->translate($entityInstance, $form->getName(), $iso, $translations[$iso]);
-                        }
+                        $this->repository->translate($entityInstance, $form->getName(), $iso, $translations[$iso]);
                     }
                 }
-
-                $parent = $form->getParent();
-                if ($parent) {
-                    $parentData = $parent->getData();
-                    $getMethod = 'get' . ucfirst($form->getName());
-                    if (!$parentData->$getMethod()) {
-                        if (array_key_exists('en', $translations)) {
-                            $setMethod = 'set' . ucfirst($form->getName());
-                            $parentData->$setMethod($translations['en']);
-                        } else if (array_key_exists('nl', $translations)) {
-                            $setMethod = 'set' . ucfirst($form->getName());
-                            $parentData->$setMethod($translations['nl']);
-                        }
-                    }
-                }
-
-
             } else {
-
                 if (false === $form->getConfig()->getOption("mapped") || null === $form->getConfig()->getOption("mapped")) {
                     continue;
                 }
-
                 $accessor = PropertyAccess::createPropertyAccessor();
                 $accessor->setValue($entityInstance, $form->getName(), $form->getData());
-
             }
-
         }
-
     }
-
-
 }
