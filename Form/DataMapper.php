@@ -2,6 +2,7 @@
 
 namespace Simettric\DoctrineTranslatableFormBundle\Form;
 
+use Doctrine\Common\Inflector\Inflector;
 use Doctrine\DBAL\DBALException;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\ORMException;
@@ -120,6 +121,8 @@ class DataMapper implements DataMapperInterface
             return;
         }
         foreach ($forms as $form) {
+            $object = $form->getParent()->getData();
+            $meta = $this->em->getClassMetadata(get_class($object));
             $translations = $this->getTranslations($data);
             if (false !== in_array($form->getName(), $this->property_names)) {
                 $values = [];
@@ -131,8 +134,14 @@ class DataMapper implements DataMapperInterface
                 // Can't get defaultLocale here, so just assume 'en'. Get the default main entity value when it's English
                 // as it won't be saved anymore as a translation entry.
                 if (!isset($values['en']) || empty(trim($values['en']))) {
-                    $methodName = 'get' . ucfirst($form->getName());
-                    $values['en'] = $data->$methodName();
+                    if ($object->getId()) {
+                        $englishValue = $this->em->getConnection()
+                            ->query(sprintf('SELECT `%s` FROM `%s` WHERE `id` = %d LIMIT 1', Inflector::tableize($form->getName()), $meta->getTableName(), $object->getId()))
+                            ->fetchColumn(0);
+                        if ($englishValue) {
+                            $values['en'] = $englishValue;
+                        }
+                    }
                 }
                 $form->setData($values);
             } else {
